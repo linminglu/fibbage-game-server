@@ -1,0 +1,179 @@
+<html>
+
+<body>
+<div id="game-status">
+    <p id="room_id"></p>
+    <p id="time"></p>
+    <p id="state"></p>
+    <p id="message"></p>
+    <p id="error"></p>
+</div>
+<div id="game-table">
+    <h4>Wait for players</h4>
+    <h4><a href="{{.Link}}">{{.Link}}</a></h4>
+    <input type="button" value="Start game" id="start" />
+</div>
+
+<div id="game-players">
+    <ul id="players">
+
+    </ul>
+</div>
+
+    <script src="/public/js/signalr.js"></script>
+    <script>
+        (async function () {
+            var connection = new signalR.HubConnectionBuilder()
+                .withUrl('/fibbage?id={{.Id}}&uuid={{.Uuid}}')
+                .build();
+
+            connection.on('OnPlayerConnected', (gameState) => {
+                if (gameState.length === 0) {
+                    return
+                }
+                var users = gameState[0];
+
+                if (!users) {
+                    return
+                }
+                var players = document.getElementById('players');
+                players.innerHTML = '';
+                for(let i = 0; i < users.length; i++) {
+                    var li = document.createElement('li');
+                    li.setAttribute("id", "player_" + users[i].id);
+                    li.innerText = users[i].name;
+                    players.appendChild(li);
+                }
+
+            });
+
+            connection.on('OnStatus', (gameState) => {
+                if (gameState.length === 0) {
+                    return
+                }
+                var status = gameState[0];
+                if (!status) {
+                    return
+                }
+                if (status.time) {
+                    var time = document.getElementById('time');
+                    time.innerText = status.time;
+                }
+                if (status.state) {
+                    var state = document.getElementById('state');
+                    state.innerText = status.state;
+                }
+                if (status.error) {
+                    var error = document.getElementById('error');
+                    error.innerText = status.error;
+                }
+                if (status.message) {
+                    var msg = document.getElementById('message');
+                    msg.innerText = status.message;
+                }
+                if (status.id) {
+                    var room = document.getElementById('room_id');
+                    room.innerText = status.id;
+                }
+
+            });
+
+            connection.on('OnChoice', (gameState) => {
+                if (gameState.length === 0) {
+                    return
+                }
+                var choices = gameState[0];
+
+                if (!choices) {
+                    return
+                }
+                reset();
+
+                var table = document.getElementById('game-table');
+
+                var selectList = document.createElement("select");
+                selectList.id = "choice-select";
+                table.appendChild(selectList);
+
+                var i;
+                for (i = 0; i < choices.length; i++) {
+                    var option = document.createElement("option");
+                    option.value = choices[i];
+                    option.text = choices[i];
+                    selectList.appendChild(option);
+                }
+
+                selectList.addEventListener("change", sendInput);
+
+                function sendInput() {
+                    connection.invoke('OnInput', selectList.selectedIndex.toString());
+                    selectList.disabled = true;
+                }
+
+            });
+
+            connection.on('OnPlayerReady', (gameState) => {
+                setReady(gameState)
+            });
+
+
+            function setReady(gameState) {
+
+                if (gameState.length === 0) {
+                    return
+                }
+                var playerReady = gameState[0];
+
+                if (!playerReady) {
+                    return
+                }
+
+                var players = document.getElementById('players');
+                var players_els = players.getElementsByTagName('li');
+
+
+                var i;
+                for (i = 0; i < players_els.length; i++) {
+                    if (players_els[i].id === 'player_' +  playerReady.id) {
+                        var span = document.createElement("span");
+                        span.innerText = ' + ';
+                        span.className = 'ready';
+                        players_els[i].appendChild(span);
+                        break
+                    }
+                }
+            }
+
+            function resetReady() {
+                var players = document.getElementById('players');
+                var players_els = players.getElementsByTagName('li');
+
+                var i;
+                for (i = 0; i < players_els.length; i++) {
+                    var players_els_span = players_els[i].getElementsByClassName('ready');
+                    while(players_els_span[0]) {
+                        players_els_span[0].parentNode.removeChild(players_els_span[0]);
+                    }
+                }
+            }
+
+            function resetTable() {
+                var table = document.getElementById('game-table');
+                table.innerHTML = "";
+            }
+
+            function reset() {
+                resetTable();
+                resetReady();
+            }
+
+            document.getElementById('start').addEventListener('click', () => {
+                connection.invoke('OnStart', null);
+            });
+
+            await connection.start();
+        })();
+    </script>
+</body>
+
+</html>

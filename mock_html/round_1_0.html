@@ -1,0 +1,48 @@
+<html>
+
+<body>
+
+<div id="game-table">
+    <h4>Wait for players</h4>
+    <h4 id="link"><a href="http://localhost:8086/game/game.html">http://localhost:8086/game/game.html</a></h4>
+</div>
+
+<div id="game-input">
+    <input type="button" value="Start game" id="start" />
+</div>
+
+<div id="game-players">
+    <ul id="players">
+        <li>redax</li>
+        <li>jack</li>
+        <li>tom</li>
+        <li>som</li>
+    </ul>
+</div>
+<script src="js/signalr.js"></script>
+<script>
+    (async function () {
+        var subscription;
+        var connection = new signalR.HubConnectionBuilder()
+            .withUrl('/fibbage')
+            .build();
+
+        document.getElementById('send').addEventListener('click', () => {
+            var val = document.getElementById('message').value;
+            if (val) {
+                connection.invoke('send', val);
+            }
+        });
+        connection.on('send', message => {
+            var li = document.createElement('li');
+            li.innerText = 'sent ' + message;
+            document.getElementById('messages').appendChild(li);
+        });
+
+
+        await connection.start();
+    })();
+</script>
+</body>
+
+</html>

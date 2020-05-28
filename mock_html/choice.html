@@ -1,0 +1,64 @@
+<html>
+
+<body>
+<div id="game-status">
+    <p id="room_id">e9e6d6d6-1423-4396-8dd0-189dbca0172b</p>
+    <p id="time">2020-05-24 13:29:29.810006 +0300 EEST m=+9.993012760</p>
+    <p id="state">ONE</p>
+    <p id="message">choose categories</p>
+    <p id="error"></p>
+</div>
+<div id="game-table">
+    <h4>Wait for players</h4>
+    <h4><a href="www.test.me">www.test.me</a></h4>
+    <input type="button" value="Start game" id="start" />
+</div>
+
+<div id="game-players">
+    <ul id="players">
+        <li id="player_usNiTbIFNe4P3k/Gn2ISNQ==">aaa</li>
+        <li id="player_usNiTbIFNe4P3k/Gn2ISN2==">bbb</li>
+        <li id="player_usNiTbIFNe4P3k/Gn2ISN3==">ccc</li>
+        <li id="player_usNiTbIFNe4P3k/Gn2ISN4==">ddd</li>
+    </ul>
+</div>
+    <script>
+        function choice(gameState) {
+
+            if (gameState.length === 0) {
+                return
+            }
+            var choices = gameState[0];
+
+            if (!choices) {
+                return
+            }
+
+            var table = document.getElementById('game-table');
+            table.innerHTML = "";
+
+            var selectList = document.createElement("select");
+            selectList.id = "choice-select";
+            table.appendChild(selectList);
+
+            var i;
+            for (i = 0; i < choices.length; i++) {
+                var option = document.createElement("option");
+                option.value = choices[i];
+                option.text = choices[i];
+                selectList.appendChild(option);
+            }
+
+            selectList.addEventListener("change", sendInput);
+
+            function sendInput() {
+                console.log(selectList.selectedIndex);
+            }
+
+        }
+        var test = [["Netflix", "Nepal", "Santa"]]
+        choice(test)
+    </script>
+</body>
+
+</html>

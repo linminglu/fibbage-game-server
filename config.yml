@@ -1,0 +1,21 @@
+logger:
+  logsfileenabled: false
+  logfilepath: ""
+  logfileName: ""
+  logrotatemegabytes: 0
+  logrotateduration: 0
+  logrotatefiles: 0
+  logdebugmode: true
+
+database:
+  driver: "mysql"
+  username: "newuser"
+  password: "password"
+  name: "fibbage_db"
+  server: "127.0.0.1"
+  port: 3306
+
+
+
+
+

@@ -1,0 +1,58 @@
+<html>
+
+<body>
+<div id="game-status">
+    <p id="room_id">e9e6d6d6-1423-4396-8dd0-189dbca0172b</p>
+    <p id="time">2020-05-24 13:29:29.810006 +0300 EEST m=+9.993012760</p>
+    <p id="state">ONE</p>
+    <p id="message">choose categories</p>
+    <p id="error"></p>
+</div>
+<div id="game-table">
+    <h4>Wait for players</h4>
+    <h4><a href="www.test.me">www.test.me</a></h4>
+    <input type="button" value="Start game" id="start" />
+</div>
+
+<div id="game-players">
+    <ul id="players">
+        <li id="player_1">aaa</li>
+        <li id="player_2">bbb</li>
+        <li id="player_3">ccc</li>
+        <li id="player_4">ddd</li>
+    </ul>
+</div>
+    <script>
+        function setReady(gameState) {
+
+            if (gameState.length === 0) {
+                return
+            }
+            var playerReady = gameState[0];
+
+            if (!playerReady) {
+                return
+            }
+
+            var players = document.getElementById('players');
+            var players_els = players.getElementsByTagName('li');
+
+
+            var i;
+            for (i = 0; i < players_els.length; i++) {
+                if (players_els[i].id === 'player_' +  playerReady.id) {
+                    var span = document.createElement("span");
+                    span.innerText = ' + ';
+                    span.className = 'ready';
+                    players_els[i].appendChild(span);
+                }
+
+            }
+
+        }
+        var test = [{"id":"8","ready":true}]
+        setReady(test)
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,47 @@
+<html>
+
+<body>
+<div id="game-status">
+    <p id="room_id">e9e6d6d6-1423-4396-8dd0-189dbca0172b</p>
+    <p id="time">2020-05-24 13:29:29.810006 +0300 EEST m=+9.993012760</p>
+    <p id="state">ONE</p>
+    <p id="message">choose categories</p>
+    <p id="error"></p>
+</div>
+<div id="game-table">
+    <h4>Wait for players</h4>
+    <h4><a href="www.test.me">www.test.me</a></h4>
+    <input type="button" value="Start game" id="start" />
+</div>
+
+<div id="game-players">
+    <ul id="players">
+        <li id="player_1">aaa<span class="ready"> + </span>
+        </li>
+        <li id="player_2">bbb<span class="ready"> + </span>
+        </li>
+        <li id="player_3">ccc<span class="ready"> + </span>
+        </li>
+        <li id="player_4">ddd</li>
+    </ul>
+</div>
+    <script>
+
+        function resetReady() {
+            var players = document.getElementById('players');
+            var players_els = players.getElementsByTagName('li');
+
+            var i;
+            for (i = 0; i < players_els.length; i++) {
+                var players_els_span = players_els[i].getElementsByClassName('ready');
+                console.log(players_els_span)
+                while(players_els_span[0]) {
+                    players_els_span[0].parentNode.removeChild(players_els_span[0]);
+                }
+            }
+        }
+        resetReady()
+    </script>
+</body>
+
+</html>
