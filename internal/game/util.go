@@ -1,4 +1,4 @@
-package fibbage
+package game
 
 func remove(s []string, i int) []string {
 	s[len(s)-1], s[i] = s[i], s[len(s)-1]

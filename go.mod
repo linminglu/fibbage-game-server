@@ -12,5 +12,7 @@ require (
 	github.com/mattn/go-colorable v0.1.6
 	github.com/sirupsen/logrus v1.6.0
 	github.com/snowzach/rotatefilehook v0.0.0-20180327172521-2f64f265f58c
+	github.com/spf13/viper v1.7.0
+	github.com/topfreegames/pitaya v1.1.1
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 )
