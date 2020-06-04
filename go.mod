@@ -10,6 +10,7 @@ require (
 	github.com/jinzhu/gorm v1.9.12
 	github.com/looplab/fsm v0.1.0
 	github.com/mattn/go-colorable v0.1.6
+	github.com/prometheus/common v0.4.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/snowzach/rotatefilehook v0.0.0-20180327172521-2f64f265f58c
 	github.com/spf13/viper v1.7.0

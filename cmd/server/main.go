@@ -10,13 +10,11 @@ import (
 	"github.com/topfreegames/pitaya/config"
 	"github.com/topfreegames/pitaya/groups"
 	"github.com/topfreegames/pitaya/serialize/json"
-	"github.com/zdarovich/fibbage-game-server/internal/game"
-	"github.com/zdarovich/fibbage-game-server/internal/room"
+	"github.com/zdarovich/fibbage-game-server/internal/services/game"
+	"github.com/zdarovich/fibbage-game-server/internal/services/room"
 	"log"
 	"strings"
 )
-
-
 
 func main() {
 	go func() {
@@ -35,7 +33,7 @@ func main() {
 	pitaya.SetSerializer(s)
 	gsi := groups.NewMemoryGroupService(config.NewConfig(conf))
 	pitaya.InitGroups(gsi)
-	err := pitaya.GroupCreate(context.Background(), "room")
+	err := pitaya.GroupCreate(context.Background(), "game")
 	if err != nil {
 		panic(err)
 	}
@@ -53,7 +51,7 @@ func main() {
 	t := acceptor.NewWSAcceptor(":3250")
 	pitaya.AddAcceptor(t)
 
-	pitaya.Configure(true, "chat", pitaya.Cluster, map[string]string{}, conf)
+	pitaya.Configure(true, "game", pitaya.Cluster, map[string]string{}, conf)
 	pitaya.Start()
 }
 

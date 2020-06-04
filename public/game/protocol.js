@@ -257,7 +257,7 @@
     copyArray(body, 0, bytes, offset, bodyLen);
 
     return {'id': id, 'type': type, 'compressRoute': compressRoute,
-            'route': route, 'body': body};
+      'route': route, 'body': body};
   };
 
   var copyArray = function(dest, doffset, src, soffset, length) {
@@ -278,7 +278,7 @@
 
   var msgHasRoute = function(type) {
     return type === Message.TYPE_REQUEST || type === Message.TYPE_NOTIFY ||
-           type === Message.TYPE_PUSH;
+        type === Message.TYPE_PUSH;
   };
 
   var caculateMsgIdBytes = function(id) {
@@ -292,7 +292,7 @@
 
   var encodeMsgFlag = function(type, compressRoute, buffer, offset) {
     if(type !== Message.TYPE_REQUEST && type !== Message.TYPE_NOTIFY &&
-       type !== Message.TYPE_RESPONSE && type !== Message.TYPE_PUSH) {
+        type !== Message.TYPE_RESPONSE && type !== Message.TYPE_PUSH) {
       throw new Error('unkonw message type: ' + type);
     }
 

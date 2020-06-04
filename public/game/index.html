@@ -2,68 +2,389 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Chat Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fibbage Demo</title>
+    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.8.2/css/bulma.min.css">
+    <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+
 </head>
 <body>
-<div id="container">
-    <ul>
-        <li v-for="msg in messages">[<span style="color:red;">{{msg.name}}</span>]{{msg.content}}</li>
-    </ul>
-    <div class="controls">
-        <input type="text" v-model="nickname">
-        <input type="text" v-model="inputMessage">
-        <input type="button" v-on:click="sendMessage" value="Send">
-    </div>
+<div id="app">
+    <section class="section">
+        <div class="container">
+
+                <div class="game-table">
+
+                    <div v-if="game.state === 'WAITING'">
+                            <div v-if="!hasName">
+                                <div class="input-name-container has-text-centered">
+                                    <div class="field">
+                                        <div class="control">
+                                            <input class="input is-danger" type="text" placeholder="Name" v-model="nickname">
+                                        </div>
+                                    </div>
+                                    <button class="button is-danger is-rounded" v-on:click="confirm">Create player</button>
+                                </div>
+                            </div>
+                            <div v-if="hasName">
+                                <div id="waiting-list">
+                                    <article class="message is-warning">
+                                        <div class="message-header">
+                                            <p>Waiting for players</p>
+                                        </div>
+                                        <div class="message-body">
+                                            <ul v-if="players" id="players">
+                                                <li v-for="player in players" v-if="player.name">
+                                                    <span>{{player.name}}</span>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </article>
+                                    <button class="button is-success is-rounded" v-on:click="start">Start game</button>
+                                </div>
+                            </div>
+                    </div>
+                    <div v-else>
+                        <div id="playground">
+                            <div class="header">
+                                <p id="time">{{game.time}}</p>
+                                <p id="state">{{game.state}}</p>
+                                <p id="status">{{game.status}}</p>
+                                <p style="color:red" id="error"></p>
+                            </div>
+                            <div class="board">
+                                <div v-if="game.state === 'STARTING'">
+                                    <p>starting game...</p>
+                                    <div class="loading-random">
+                                        <div class="square small el"></div>
+                                        <div class="square small el"></div>
+                                        <div class="square small el"></div>
+                                    </div>
+
+                                </div>
+                                <div v-else-if="game.state === 'ONE'">
+                                    <div v-if="game.question">
+                                        <p>{{game.question.question}}</p>
+                                        <p><span>True answer: </span> {{game.question.answer}}</p>
+                                    </div>
+                                    <div v-else>
+                                        <input type="button" v-for="(category, index) in game.categories" v-bind:value="category" v-on:click="sendCategory(index)">
+                                    </div>
+                                </div>
+                                <div v-else-if="game.state === 'TWO'">
+                                    <p>{{game.question.question}}</p>
+                                    <input type="text" v-model="game.answer">
+                                    <input type="button" value="Send lie answer" v-on:click="sendAnswer()">
+                                </div>
+                                <div v-else-if="game.state === 'THREE'">
+                                    <p>{{game.question.question}}</p>
+                                    <input type="button" v-for="(answer, index) in game.answers" v-bind:value="answer" v-on:click="sendAnswerOption(index)">
+                                </div>
+
+                                <div v-else-if="game.state === 'FINISH'">
+
+                                    <ul>
+                                        <li v-for="score in scoreMap">
+                                            <span>{{score[0]}}<span style="color: chocolate"> {{score[1]}} </span></span>
+                                        </li>
+                                    </ul>
+
+                                </div>
+                                <div v-else>
+
+                                </div>
+                            </div>
+                            <div class="footer">
+                                <ul>
+                                    <li v-for="player in players" v-if="player.name">
+                                        <span>{{player.name}}<span v-if="player.ready"> + </span></span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </section>
+
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.11/vue.js" type="text/javascript"></script>
+<script src="anime.min.js" type="text/javascript"></script>
 <!--[starx websocket library](https://github.com/topfreegames/pitaya-client-websocket)-->
 <script src="protocol.js" type="text/javascript"></script>
 <script src="starx-wsclient.js" type="text/javascript"></script>
 <script>
-    var v = new Vue({
-        el: "#container",
+    let v = new Vue({
+        el: "#app",
         data: {
-            nickname:'guest' + Date.now(),
-            inputMessage:'',
-            messages: []
+            nickname: "",
+            hasName: false,
+            isNameValid: false,
+            players:[{name:"redax", id:"dasdsa"}],
+            isStarted: false,
+            game: {
+                state:"WAITING",
+                status: "",
+                time: "",
+                categories:[],
+                question: null,
+                answer:"",
+                answers:[],
+                choices:[],
+                tempScore:[],
+                score:[],
+                answerMatrix:[],
+            }
+        },
+        watch: {
+            nameValid: function(val, oldVal) {
+                const self = this
+                console.log("nameValid");
+                let inputNameEl = document.getElementById('app')
+                let appMaxWidth = inputNameEl.offsetWidth
+                anime({
+                    targets: '.input-name-container',
+                    translateX: [0, appMaxWidth],
+                    delay: 500,
+                    direction: 'alternate',
+                    loop: false,
+                    complete: function() {
+                        inputNameEl.setAttribute('class', 'is-hidden')
+                        self.hasName = true;
+                        waitingList()
+                    }
+                });
+
+                let waitingList = function () {
+                    let playgroundEl = document.getElementById('waiting-list')
+                    let playgroundHeight = playgroundEl.offsetHeight
+
+                    anime({
+                        targets: '#waiting-list',
+                        translateY: [-playgroundHeight, 0],
+                        delay: 500,
+                        direction: 'alternate',
+                        loop: false,
+                        complete: function() {
+                        }
+                    });
+                }
+            },
+            state: function(val, oldVal) {
+                console.log("reset ready");
+                for (let i = 0; i < this.players.length; i++) {
+                    this.players[i].ready = false
+                }
+                if (this.game.state === 'STARTING') {
+                    let playgroundEl = document.getElementById('playground')
+                    let playgroundHeight = playgroundEl.offsetHeight
+
+                    anime({
+                        targets: '#playground',
+                        translateY: [-playgroundHeight, 0],
+                        delay: 500,
+                        direction: 'alternate',
+                        loop: false,
+                        complete: function() {
+                            randomValues()
+                        }
+                    });
+                    function randomValues() {
+                        anime({
+                            targets: '.loading-random .el',
+                            translateX: function() {
+                                return anime.random(0, 270);
+                            },
+                            easing: 'easeInOutQuad',
+                            duration: 750,
+                            complete: randomValues
+                        });
+                    }
+                    randomValues();
+
+
+                }
+            },
+
+        },
+        computed: {
+            nameValid: function() {
+                return this.isNameValid
+            },
+            state: function() {
+                return this.game.state
+            },
+            score: function() {
+                return this.game.tempScore
+            },
+            choices: function() {
+                return this.game.choices
+            },
+            scoreMap: function() {
+                let scoreMap = new Map()
+                if (this.score) {
+                    for (let k in this.score) {
+                        let player = v.players.find(p => p.id === k);
+                        scoreMap.set(player.name, this.score[k])
+                    }
+                }
+                return scoreMap
+            },
+            choicesMap: function() {
+                let choicesMap = new Map()
+                if (this.choices) {
+                    for (let k in this.choices) {
+                        console.log(k)
+                        let player = v.players.find(p => p.id === k);
+                        console.log(player)
+                        console.log(v.players)
+                        choicesMap.set(player.name, this.choices[k]['ANSWER_LIE'])
+                    }
+                }
+                return choicesMap
+            }
         },
         methods: {
-            sendMessage: function () {
-                console.log(this.inputMessage);
-                starx.notify('room.message', {name: this.nickname, content: this.inputMessage});
-                this.inputMessage = '';
-            }
+            confirm: function () {
+                const self = this;
+                starx.request('room.createplayer', {nickname: this.nickname}, function (data) {
+                    console.log("room.createplayer");
+                    console.log(data);
+                    if (data.code === 0) {
+                        this.isNameValid = true
+                    }
+                });
+            },
+            start: function () {
+                const self = this;
+                starx.request('game.start', {}, function (data) {
+                    console.log("game.start");
+                    console.log(data);
+                    if (data.code === 0) {
+                        self.isStarted = true;
+                    }
+                });
+            },
+            sendCategory: function (categoryId) {
+                const self = this;
+                starx.request('game.input', {categoryId:categoryId}, function (data) {
+                    console.log("game.input");
+                    console.log(data);
+                    if (data.code === 0) {
+                    }
+                });
+            },
+            sendAnswer: function () {
+                const self = this;
+                starx.request('game.input', {answer:self.game.answer}, function (data) {
+                    console.log("game.input");
+                    console.log(data);
+                    if (data.code === 0) {
+
+                    }
+                });
+            },
+            sendAnswerOption: function (answerId) {
+                const self = this;
+                starx.request('game.input', {answerId:answerId}, function (data) {
+                    console.log("game.input");
+                    console.log(data);
+                    if (data.code === 0) {
+                    }
+                });
+            },
+
         }
     });
 
-    var onMessage = function (msg) {
-        v.messages.push(msg)
-    };
 
-    var join = function (data) {
+    let onPlayerConnected = function (data) {
+        console.log("onPlayerConnected");
+        console.log(data);
+        v.players.push(data)
+    };
+    let onPlayerDisconnected = function (data) {
+        console.log("onPlayerDisconnected");
+        console.log(data);
+        let player = v.players.find(p => p.id === data.id)
+        v.players.splice(v.players.indexOf(player), 1);
+    };
+    let onCreatePlayer = function (data) {
+        console.log("onCreatePlayer");
+        console.log(data);
+        v.players = data
+    };
+    let onReady = function (data) {
+        console.log("onReady");
+        console.log(data);
+        let player = v.players.find(p => p.id === data.userReady.id)
+        v.players[v.players.indexOf(player)].ready = true
+    };
+    let onStart = function (data) {
+        console.log("onStart");
+        console.log(data);
+        v.isStarted = true
+    };
+    let onState = function (data) {
+        console.log("onState");
+        console.log(data);
+        v.game.state = data.state
+    };
+    let onStatus = function (data) {
+        v.game.status = data.status
+        v.game.time = data.time
+    };
+    let onCategories = function (data) {
+        console.log("onCategories");
+        console.log(data);
+        v.game.categories = data.categories
+    };
+    let onQuestion = function (data) {
+        console.log("onQuestion");
+        console.log(data);
+        v.game.question = data.question
+    };
+    let onAnswers = function (data) {
+        console.log("onAnswers");
+        console.log(data);
+        v.game.answers = data.answers
+    };
+    let onScore = function (data) {
+        console.log("onScore");
+        console.log(data);
+        v.game.tempScore = data.score
+    };
+    let onChoices = function (data) {
+        console.log("onChoices");
+        console.log(data);
+        v.game.answerMatrix = data.answerMatrix
+    };
+    let join = function (data) {
+        console.log("join");
         console.log(data);
         if(data.code === 0) {
-            v.messages.push({name:'system', content:data.result});
-            starx.on('onMessage', onMessage)
+            v.players.push(data)
         }
-    };
-
-    var onNewUser = function (data) {
-        console.log(data);
-        v.messages.push({name:'system', content:data.content});
-    };
-
-    var onMembers = function (data) {
-        console.log(data);
-        v.messages.push({name:'system', content: "members: "+data.members});
     };
 
     starx.init({host: '127.0.0.1', port: 3250, path: '/'}, function () {
         console.log("initialized");
-        starx.on("onNewUser", onNewUser);
-        starx.on("onMembers", onMembers);
+        starx.on("onPlayerConnected", onPlayerConnected);
+        starx.on("onCreatePlayer", onCreatePlayer);
+        starx.on("onPlayerDisconnected", onPlayerDisconnected);
+        starx.on("onReady", onReady);
+        starx.on("onStart", onStart);
+        starx.on("onState", onState);
+        starx.on("onStatus", onStatus);
+        starx.on("onCategories", onCategories);
+        starx.on("onQuestion", onQuestion);
+        starx.on("onAnswers", onAnswers);
+        starx.on("onScore", onScore);
+        starx.on("onChoices", onChoices);
         starx.request("room.join", {}, join);
     })
+
 </script>
 </body>
 </html>

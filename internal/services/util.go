@@ -1,6 +1,6 @@
-package game
+package services
 
-func remove(s []string, i int) []string {
+func Remove(s []string, i int) []string {
 	s[len(s)-1], s[i] = s[i], s[len(s)-1]
 	return s[:len(s)-1]
 }
