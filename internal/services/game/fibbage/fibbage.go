@@ -20,8 +20,9 @@ func New() *fsm.FSM {
 			{Name: event.START_THREE, Src: []string{state.INPUT_LIE_TEXT}, Dst: state.THREE}, // choose true answer for other player question
 			{Name: event.INPUT, Src: []string{state.THREE}, Dst: state.INPUT_TRUE_OPTION},
 			{Name: event.START_SCORE, Src: []string{state.INPUT_TRUE_OPTION}, Dst: state.SCORE}, // count score of given answers
-			{Name: event.START_REPEAT, Src: []string{state.SCORE}, Dst: state.TWO},              // repeat round two for remaining player questions
-			{Name: event.STOP, Src: []string{state.SCORE}, Dst: state.FINISH},                   // finish game
+			{Name: event.START_FINISH, Src: []string{state.SCORE}, Dst: state.FINISH},           // finish game
+			{Name: event.START_REPEAT, Src: []string{state.FINISH}, Dst: state.TWO},             // repeat round two for remaining player questions
+			{Name: event.START_RESET, Src: []string{state.FINISH}, Dst: state.RESET},            // reset game
 		},
 		fsm.Callbacks{
 			event.INPUT: func(e *fsm.Event) {
@@ -48,8 +49,8 @@ func New() *fsm.FSM {
 			event.START_REPEAT: func(e *fsm.Event) {
 				logger.Log.Info("START_REPEAT event")
 			},
-			event.STOP: func(e *fsm.Event) {
-				logger.Log.Info("STOP event")
+			event.START_FINISH: func(e *fsm.Event) {
+				logger.Log.Info("START_FINISH event")
 			},
 			state.STARTING: func(e *fsm.Event) {
 				logger.Log.Info("STARTING state")

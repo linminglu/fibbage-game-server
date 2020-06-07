@@ -5,8 +5,8 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/looplab/fsm"
-	"github.com/prometheus/common/log"
 	"github.com/topfreegames/pitaya"
 	"github.com/topfreegames/pitaya/component"
 	"github.com/topfreegames/pitaya/logger"
@@ -20,8 +20,6 @@ import (
 	"github.com/zdarovich/fibbage-game-server/internal/services/game/state"
 	"math/big"
 	mathRand "math/rand"
-	"strconv"
-	"sync/atomic"
 	"time"
 )
 
@@ -33,49 +31,37 @@ type (
 		timer          *timer.Timer
 		state          *fsm.FSM
 		done           chan struct{}
-		ready          int32
-		usedQuestions  map[string]bool
-		currentPlayer  string
+		players        map[string]*Player
 		currentAnswers []string
-		finalScore     map[string]int
-		dataMap        map[string]map[string]string
 	}
-
-	Message struct {
-		CurrentPlayerId string              `json:"currentPlayerId,omitempty"`
-		Ticks           int                 `json:"ticks,omitempty"`
-		State           string              `json:"state,omitempty"`
-		Categories      []string            `json:"categories,omitempty"`
-		Answers         []string            `json:"answers,omitempty"`
-		ServerTime      string              `json:"time,omitempty"`
-		Status          string              `json:"status,omitempty"`
-		Question        *models.Question    `json:"question,omitempty"`
-		UserReady       *UserReady          `json:"userReady,omitempty"`
-		Score           map[string]int      `json:"score,omitempty"`
-		Total           map[string]int      `json:"total,omitempty"`
-		Choices         []map[string]string `json:"answerMatrix,omitempty"`
+	Instance struct {
+		state          *fsm.FSM
+		done           chan struct{}
+		players        map[string]*Player
+		currentAnswers []string
 	}
-	UserReady struct {
-		UID   string `json:"id,omitempty"`
-		Ready bool   `json:"ready,omitempty"`
-	}
-
-	InputMessage struct {
-		CategoryId int    `json:"categoryId,omitempty"`
-		Answer     string `json:"answer,omitempty"`
-		AnswerId   int    `json:"answerId,omitempty"`
-	}
-
-	// Response represents the result of joining room
-	Response struct {
-		Code   int    `json:"code"`
-		Result string `json:"result"`
+	Player struct {
+		name          string
+		question      *models.Question
+		categories    []string
+		categoryId    int
+		totalScore    int
+		answerLie     string
+		answerTruthId int
+		iconName      string
+		ready         bool
+		used          bool
+		current       bool
 	}
 )
 
 // New returns a Handler Base implementation
 func New() *Game {
-	return &Game{state: fibbage.New(), done: make(chan struct{}), ready: 0, usedQuestions: make(map[string]bool), finalScore: make(map[string]int), dataMap: make(map[string]map[string]string)}
+	return &Game{
+		state:   fibbage.New(),
+		done:    make(chan struct{}),
+		players: make(map[string]*Player),
+	}
 }
 
 // AfterInit component lifetime callback
@@ -111,6 +97,117 @@ func (r *Game) Start(ctx context.Context, msg []byte) (*Response, error) {
 	return &Response{Result: "success"}, nil
 }
 
+// Join room
+func (r *Game) Join(ctx context.Context, msg *NicknameMessage) (*Response, error) {
+	s := pitaya.GetSessionFromCtx(ctx)
+
+	if msg == nil || msg.Nickname == "" {
+		return &Response{Code: 1, Result: "fail"}, nil
+	} else if r.state != nil && r.state.Current() != state.WAITING {
+		return &Response{Code: 1, Result: "fail"}, nil
+	}
+
+	err := s.Bind(ctx, uuid.New().String()) // binding session uid
+
+	if err != nil {
+		return nil, pitaya.Error(err, "RH-000", map[string]string{"failed": "bind"})
+	}
+	err = pitaya.GroupAddMember(ctx, "game", s.UID()) // add session to group
+	if err != nil {
+		return nil, err
+	}
+	r.players[s.UID()] = &Player{}
+	r.players[s.UID()].name = msg.Nickname
+
+	uids, err := pitaya.GroupMembers(ctx, "game")
+	if err != nil {
+		return nil, err
+	}
+	usedIcons := make(map[string]bool)
+	for _, p := range r.players {
+		usedIcons[p.iconName] = true
+	}
+	tempIcons := make([]string, 0)
+	for _, i := range iconSet {
+		if usedIcons[i] {
+			continue
+		}
+		tempIcons = append(tempIcons, i)
+	}
+	iconsCount := len(tempIcons)
+	var ri int64
+	randIdx, err := rand.Int(rand.Reader, big.NewInt(int64(iconsCount)))
+	if err != nil {
+		logger.Log.Error(err)
+		ri = 0
+	} else {
+		ri = randIdx.Int64()
+	}
+	r.players[s.UID()].iconName = tempIcons[ri]
+
+	var users []User
+	for _, uid := range uids {
+		users = append(users, User{
+			UID:  uid,
+			Name: r.players[uid].name,
+			Icon: r.players[uid].iconName,
+		})
+	}
+	for _, uid := range uids {
+		if uid == s.UID() {
+			err := s.Push("onCreatePlayer", users)
+			if err != nil {
+				return nil, err
+			}
+			continue
+		}
+		sess := session.GetSessionByUID(uid)
+		err := sess.Push("onCreatePlayer", []User{{
+			UID:  s.UID(),
+			Name: r.players[s.UID()].name,
+			Icon: r.players[s.UID()].iconName,
+		}})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// on session close, remove it from group
+	s.OnClose(func() {
+		pitaya.GroupRemoveMember(ctx, "game", s.UID())
+		delete(r.players, s.UID())
+		count, _ := pitaya.GroupCountMembers(context.Background(), "game")
+		if count == 0 {
+			r.done <- struct{}{}
+		} else {
+			pitaya.GroupBroadcast(ctx, "game", "game", "onPlayerDisconnected", &User{UID: s.UID()})
+		}
+	})
+
+	return &Response{Result: "success"}, nil
+}
+
+func (r *Game) reset() {
+	r.state = fibbage.New()
+	r.done = make(chan struct{})
+	for uid, p := range r.players {
+		resetPlayer := &Player{
+			name:          p.name,
+			question:      nil,
+			categories:    nil,
+			categoryId:    0,
+			totalScore:    0,
+			answerLie:     "",
+			answerTruthId: 0,
+			iconName:      p.iconName,
+			ready:         false,
+			used:          false,
+			current:       false,
+		}
+		r.players[uid] = resetPlayer
+	}
+}
+
 func (r *Game) Stop(ctx context.Context, msg []byte) (*Response, error) {
 
 	return &Response{Result: "success"}, nil
@@ -121,52 +218,40 @@ func (r *Game) Input(ctx context.Context, msg *InputMessage) (*Response, error) 
 
 	switch r.state.Current() {
 	case state.INPUT_CATEGORY:
-		categoryId := s.Get(CATEGORYID)
-		if categoryId != nil {
+
+		if r.players[s.UID()].ready {
 			return &Response{Result: "fail"}, nil
 		}
 
-		if categories, ok := s.Get(CATEGORIES).([]string); ok {
-			idx := msg.CategoryId
-			if idx >= 0 && idx < len(categories) {
-				err := s.Set(CATEGORYID, idx)
-				if err != nil {
-					return nil, pitaya.Error(err, "RH-000", map[string]string{"failed": "set categoryid error"})
-				}
-				atomic.AddInt32(&r.ready, 1)
-
-				err = pitaya.GroupBroadcast(ctx, "game", "game", "onReady",
-					&Message{UserReady: &UserReady{UID: s.UID(), Ready: true}},
-				)
-				if err != nil {
-					return nil, err
-				}
-				return &Response{Result: "success"}, nil
-
-			} else {
-				idx = 0
-				err := s.Set(CATEGORYID, idx)
-				if err != nil {
-					return nil, pitaya.Error(err, "RH-000", map[string]string{"failed": "set categoryid error"})
-				}
-				return &Response{Result: "fail"}, nil
+		idx := msg.CategoryId
+		if idx >= 0 && idx < len(r.players[s.UID()].categories) {
+			r.players[s.UID()].categoryId = idx
+			r.players[s.UID()].ready = true
+			err := pitaya.GroupBroadcast(ctx, "game", "game", "onReady",
+				&User{
+					UID: s.UID(),
+				},
+			)
+			if err != nil {
+				return nil, err
 			}
+			return &Response{Result: "success"}, nil
 
-		} else {
-			return nil, pitaya.Error(errors.New("categories cast error"), "RH-000", map[string]string{"failed": "categories cast error"})
 		}
+		return &Response{Result: "fail"}, nil
 
 	case state.INPUT_LIE_TEXT:
-		answer := r.dataMap[s.UID()][ANSWER_LIE]
-		if answer != "" {
+		if r.players[s.UID()].ready {
+			return &Response{Result: "fail"}, nil
+		} else if msg.Answer == "" {
+			return &Response{Result: "fail"}, nil
+		} else if s.UID() == GetCurrentPlayerId(r.players) && msg.Answer == r.players[s.UID()].question.Answer {
 			return &Response{Result: "fail"}, nil
 		}
-		if msg.Answer == "" {
-			return &Response{Result: "fail"}, nil
-		}
-		r.dataMap[s.UID()][ANSWER_LIE] = msg.Answer
 
-		atomic.AddInt32(&r.ready, 1)
+		r.players[s.UID()].answerLie = msg.Answer
+
+		r.players[s.UID()].ready = true
 		err := pitaya.GroupBroadcast(ctx, "game", "game", "onReady",
 			&Message{UserReady: &UserReady{UID: s.UID(), Ready: true}},
 		)
@@ -177,15 +262,17 @@ func (r *Game) Input(ctx context.Context, msg *InputMessage) (*Response, error) 
 		return &Response{Result: "success"}, nil
 
 	case state.INPUT_TRUE_OPTION:
-		answerId := r.dataMap[s.UID()][ANSWERID]
-		if answerId != "" {
+		if r.players[s.UID()].ready {
 			return &Response{Result: "fail"}, nil
 		}
 		idx := msg.AnswerId
-		if idx >= 0 && idx < len(r.currentAnswers) {
-			r.dataMap[s.UID()][ANSWERID] = strconv.Itoa(idx)
+		if idx >= 0 && idx < len(r.currentAnswers) { // each player lie answer + 1 truth answer
+			if r.currentAnswers[idx] == r.players[s.UID()].answerLie {
+				return &Response{Result: "fail"}, nil
+			}
+			r.players[s.UID()].answerTruthId = idx
 
-			atomic.AddInt32(&r.ready, 1)
+			r.players[s.UID()].ready = true
 
 			err := pitaya.GroupBroadcast(ctx, "game", "game", "onReady",
 				&Message{UserReady: &UserReady{UID: s.UID(), Ready: true}},
@@ -206,6 +293,7 @@ func (r *Game) Input(ctx context.Context, msg *InputMessage) (*Response, error) 
 func (r *Game) loop() {
 	logger.Log.Info("start loop")
 	ctx := context.Background()
+
 	var errCh error
 loop:
 	for {
@@ -310,7 +398,8 @@ loop:
 				errCh = err
 				break loop
 			}
-			err = r.state.Event(event.STOP)
+
+			err = r.state.Event(event.START_FINISH)
 			if err != nil {
 				errCh = err
 				break loop
@@ -321,7 +410,34 @@ loop:
 				errCh = err
 				break loop
 			}
-
+			playersLeft := false
+			for _, player := range r.players {
+				if player.used {
+					continue
+				}
+				playersLeft = true
+				break
+			}
+			if playersLeft {
+				err = r.state.Event(event.START_REPEAT)
+				if err != nil {
+					errCh = err
+					break loop
+				}
+			} else {
+				err = r.state.Event(event.START_RESET)
+				if err != nil {
+					errCh = err
+					break loop
+				}
+			}
+		case state.RESET:
+			err := pitaya.GroupBroadcast(ctx, "game", "game", "onState", &Message{
+				State: r.state.Current(),
+			})
+			if err != nil {
+				errCh = err
+			}
 			break loop
 		default:
 			logger.Log.Errorf("unknown state %s", r.state.Current())
@@ -332,17 +448,18 @@ loop:
 		logger.Log.Error(errCh)
 	}
 	logger.Log.Info("stop loop")
-	r.state = fibbage.New()
+	r.reset()
 }
 
 func (r *Game) starting(ctx context.Context) error {
+	startTime := 5
+
 	err := pitaya.GroupBroadcast(ctx, "game", "game", "onState", &Message{
 		State: r.state.Current(),
 	})
 	if err != nil {
 		return err
 	}
-	startTime := 5
 	//startTime := 1
 	for i := 0; i < startTime; i++ {
 		select {
@@ -354,14 +471,15 @@ func (r *Game) starting(ctx context.Context) error {
 }
 
 func (r *Game) one(ctx context.Context) error {
-
+	for _, player := range r.players {
+		player.ready = false
+	}
 	var categories []string
 	db.DB.Find(&[]models.Question{}).Pluck("category", &categories)
 	members, err := pitaya.GroupMembers(ctx, "game")
 	if err != nil {
 		return err
 	}
-	categoriesMap := make(map[string][]string)
 	for _, uid := range members {
 		logger.Log.Infof("assign 5 random categories to user %s", uid)
 		var choosenCategories []string
@@ -379,18 +497,17 @@ func (r *Game) one(ctx context.Context) error {
 			choosenCategories = append(choosenCategories, categories[ri])
 			categories = services.Remove(categories, int(ri))
 		}
-		categoriesMap[uid] = choosenCategories
+		r.players[uid].categories = choosenCategories
 	}
 
-	for uid, categories := range categoriesMap {
+	for uid, player := range r.players {
 		s := session.GetSessionByUID(uid)
-		err := s.Set(CATEGORIES, categories)
-		if err != nil {
-			return err
-		}
-		err = s.Push("onCategories", &Message{
-			Categories: categories,
+
+		err = s.Push("onState", &Message{
+			State:      r.state.Current(),
+			Categories: player.categories,
 		})
+
 		if err != nil {
 			return err
 		}
@@ -405,38 +522,19 @@ func (r *Game) playerQuestion(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	questionsMap := make(map[string]*models.Question)
-	var question models.Question
 	for _, uid := range members {
-		s := session.GetSessionByUID(uid)
-		if categories, ok := s.Get(CATEGORIES).([]string); ok {
-			if categoryId, ok := s.Get(CATEGORYID).(int); ok {
-				db.DB.First(&question, "category = ?", categories[categoryId])
-			} else {
-				logger.Log.Info("picking 0 question")
-				db.DB.First(&question, "category = ?", categories[0])
-			}
-		} else {
-			db.DB.First(&question)
-		}
-		questionsMap[uid] = &question
-	}
-	for uid, question := range questionsMap {
+		var question models.Question
+
+		db.DB.First(&question, "category = ?", r.players[uid].categories[r.players[uid].categoryId])
+
+		r.players[uid].question = &question
+
 		s := session.GetSessionByUID(uid)
 
-		err = s.Set(QUESTION, question)
-		if _, ok := r.dataMap[uid]; ok {
-			r.dataMap[uid][ANSWER_TRUTH] = question.Answer
-		} else {
-			r.dataMap[uid] = make(map[string]string)
-			r.dataMap[uid][ANSWER_TRUTH] = question.Answer
-		}
-		r.usedQuestions[uid] = false
-
-		if err != nil {
-			return err
-		}
-		err := s.Push("onQuestion", &Message{Question: question})
+		err = s.Push("onState", &Message{
+			State:    r.state.Current(),
+			Question: r.players[uid].question,
+		})
 		if err != nil {
 			return err
 		}
@@ -446,14 +544,7 @@ func (r *Game) playerQuestion(ctx context.Context) error {
 	for i := 0; i < roundTime; i++ {
 		select {
 		case <-time.After(1 * time.Second):
-			err := pitaya.GroupBroadcast(ctx, "game", "game", "onStatus",
-				&Message{
-					ServerTime: time.Now().String(),
-					Status:     fmt.Sprintf("seconds left for next round %d", roundTime-i),
-				})
-			if err != nil {
-				return err
-			}
+
 		}
 	}
 	return nil
@@ -462,136 +553,118 @@ func (r *Game) playerQuestion(ctx context.Context) error {
 func (r *Game) input(ctx context.Context) error {
 	defer func() {
 		logger.Log.Info("stop waiting for input")
-		r.ready = 0
 	}()
-	count, err := pitaya.GroupCountMembers(ctx, "game")
+
+	roundTime := 30
+	err := pitaya.GroupBroadcast(ctx, "game", "game", "onState", &Message{
+		State: r.state.Current(),
+	})
 	if err != nil {
 		return err
 	}
-	roundTime := 30
 	logger.Log.Info("start waiting for input")
 
 	for i := 0; i < roundTime; i++ {
 		select {
 		case <-time.After(1 * time.Second):
-			err := pitaya.GroupBroadcast(ctx, "game", "game", "onStatus",
-				&Message{
-					ServerTime: time.Now().String(),
-					Status:     fmt.Sprintf("seconds left for answer %d", roundTime-i),
-				})
-			if err != nil {
-				return err
-			}
-			if int(r.ready) == count {
+
+			if ArePlayersReady(r.players) {
 				return nil
 			}
 		}
 	}
+	for _, p := range r.players {
+		p.ready = true
+	}
+
 	return nil
 }
 
 func (r *Game) two(ctx context.Context) error {
-
-	for uid, used := range r.usedQuestions {
-		if used {
+	var currentPlayerId string
+	for uid, player := range r.players {
+		if player.used {
 			continue
 		}
-		s := session.GetSessionByUID(uid)
-		if question, ok := s.Get(QUESTION).(*models.Question); ok {
-			question.Answer = ""
-			question.AlternateSpellings = ""
-			question.Suggestions = ""
-			log.Info(uid)
-			r.currentPlayer = uid
-			r.usedQuestions[uid] = true
-
-			err := pitaya.GroupBroadcast(ctx, "game", "game", "onQuestion", &Message{Question: question})
-			if err != nil {
-				return err
-			}
-			err = pitaya.GroupBroadcast(ctx, "game", "game", "onCurrentPlayer", &Message{CurrentPlayerId: uid})
-			if err != nil {
-				return err
-			}
-			break
-		}
+		currentPlayerId = uid
+		break
 	}
+	if currentPlayerId == "" {
+		return errors.New("used player uid not left")
+	}
+	r.players[currentPlayerId].current = true
+	r.players[currentPlayerId].used = true
+
+	other := &Question{
+		Question: r.players[currentPlayerId].question.Question,
+	}
+	for _, player := range r.players {
+		player.ready = false
+	}
+	err := pitaya.GroupBroadcast(ctx, "game", "game", "onState", &Message{
+		State:           r.state.Current(),
+		Other:           other,
+		CurrentPlayerId: currentPlayerId,
+	})
+	if err != nil {
+		return err
+	}
+
 	time.Sleep(5 * time.Second)
 	return nil
 }
 
 func (r *Game) three(ctx context.Context) error {
 
-	members, err := pitaya.GroupMembers(ctx, "game")
-	if err != nil {
-		return err
+	currentPlayerId := GetCurrentPlayerId(r.players)
+	if currentPlayerId == "" {
+		return errors.New("used player uid not left")
 	}
-	log.Infof("%+v", r.dataMap)
-	var answers []string
-	for _, uid := range members {
-		if answer, ok := r.dataMap[uid][ANSWER_LIE]; ok {
-			answers = append(answers, answer)
+
+	for uid, player := range r.players {
+		if !player.ready {
+			player.answerLie = fmt.Sprintf("%s's lie", player.name) // if player missed answer in round 2 return random
+		}
+		if uid == currentPlayerId {
+			player.ready = true
+		} else {
+			player.ready = false
 		}
 	}
-	log.Info(members)
-
-	log.Info(r.currentPlayer)
-
-	answers = append(answers, r.dataMap[r.currentPlayer][ANSWER_TRUTH])
+	lieAnswers := GetCurrentAnswers(r.players, currentPlayerId)
 
 	mathRand.Seed(time.Now().UnixNano())
-	mathRand.Shuffle(len(answers), func(i, j int) { answers[i], answers[j] = answers[j], answers[i] })
-	r.currentAnswers = answers
-	err = pitaya.GroupBroadcast(ctx, "game", "game", "onAnswers",
-		&Message{
-			Answers: answers,
-		})
+	mathRand.Shuffle(len(lieAnswers), func(i, j int) { lieAnswers[i], lieAnswers[j] = lieAnswers[j], lieAnswers[i] })
+	err := pitaya.GroupBroadcast(ctx, "game", "game", "onState", &Message{
+		State:           r.state.Current(),
+		Answers:         lieAnswers,
+		CurrentPlayerId: currentPlayerId,
+	})
+	r.currentAnswers = lieAnswers
 	if err != nil {
 		return err
 	}
+
 	time.Sleep(5 * time.Second)
 
 	return nil
 }
 
 func (r *Game) score(ctx context.Context) error {
-
-	members, err := pitaya.GroupMembers(ctx, "game")
-	if err != nil {
-		return err
+	currentPlayerId := GetCurrentPlayerId(r.players)
+	if currentPlayerId == "" {
+		return errors.New("used player uid not left")
 	}
-	scoreMap := make(map[string]int)
-	choiceMap := make(map[string]int)
-	for _, uid := range members {
-		answerId, err := strconv.Atoi(r.dataMap[uid][ANSWERID])
-		if err != nil {
-			logger.Log.Error(err)
-			answerId = 0
-		}
-		choiceMap[uid] = answerId
-		currentQuestionAnswer := r.dataMap[r.currentPlayer][ANSWER_TRUTH]
+	r.players[currentPlayerId].answerTruthId = 0
+	r.players[currentPlayerId].current = false
 
-		if r.currentAnswers[answerId] == currentQuestionAnswer {
-			scoreMap[uid] = scoreMap[uid] + 1000
-		}
+	finalScore := make(map[string]int)
 
-		for key, val := range r.dataMap {
-			if key == uid {
-				continue
-			}
-			if r.currentAnswers[answerId] == val[ANSWER_LIE] {
-				scoreMap[key] = scoreMap[key] + 500
-			}
-		}
-		r.finalScore[uid] = r.finalScore[uid] + scoreMap[uid]
-	}
-	err = pitaya.GroupBroadcast(ctx, "game", "game", "onScore",
-		&Message{
-			Score: scoreMap,
-			Total: r.finalScore,
-		})
-	if err != nil {
-		return err
+	scoreMap := GetPlayersScore(r.players, currentPlayerId, r.currentAnswers)
+
+	for uid, score := range scoreMap {
+		r.players[uid].totalScore = r.players[uid].totalScore + score
+		finalScore[uid] = r.players[uid].totalScore
 	}
 
 	answermatrix := []map[string]string{
@@ -600,19 +673,27 @@ func (r *Game) score(ctx context.Context) error {
 		{"num": "player2"}, {"num": "das"}, {"num": "das"}, {"num": "das"},
 		{"num": "player3"}, {"num": "das"}, {"num": "das"}, {"num": "das"},
 	}
-	err = pitaya.GroupBroadcast(ctx, "game", "game", "onChoices",
-		&Message{
-			Choices: answermatrix,
-		})
+	err := pitaya.GroupBroadcast(ctx, "game", "game", "onState", &Message{
+		State:   r.state.Current(),
+		Score:   scoreMap,
+		Total:   finalScore,
+		Choices: answermatrix,
+	})
 	if err != nil {
 		return err
 	}
-
 	time.Sleep(10 * time.Second)
 	return nil
 }
 
 func (r *Game) finish(ctx context.Context) error {
 
+	err := pitaya.GroupBroadcast(ctx, "game", "game", "onState", &Message{
+		State: r.state.Current(),
+	})
+	if err != nil {
+		return err
+	}
+	time.Sleep(5 * time.Second)
 	return nil
 }

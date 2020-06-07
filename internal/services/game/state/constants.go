@@ -12,4 +12,5 @@ const (
 	INPUT_LIE_TEXT    string = "INPUT_LIE_TEXT"
 	INPUT_TRUE_OPTION string = "INPUT_TRUE_OPTION"
 	FINISH            string = "FINISH"
+	RESET             string = "RESET"
 )
