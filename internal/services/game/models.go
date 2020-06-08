@@ -38,9 +38,10 @@ type (
 
 	// NewUser message will be received when new user join room
 	User struct {
-		UID  string `json:"id,omitempty"`
-		Name string `json:"name,omitempty"`
-		Icon string `json:"icon,omitempty"`
+		UID      string `json:"id,omitempty"`
+		Name     string `json:"name,omitempty"`
+		Icon     string `json:"icon,omitempty"`
+		IsPlayer bool   `json:"isPlayer,omitempty"`
 	}
 
 	// AllMembers contains all members uid

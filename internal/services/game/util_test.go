@@ -22,6 +22,7 @@ func TestGetPlayersScore1(t *testing.T) {
 			Answer: "truthAnswer1",
 		},
 		answerLie: "answerLie1",
+		ready:     true,
 	}
 	players[playerTwoId] = &Player{
 		question: &models.Question{
@@ -29,6 +30,7 @@ func TestGetPlayersScore1(t *testing.T) {
 		},
 		answerLie:     "answerLie2",
 		answerTruthId: 0,
+		ready:         true,
 	}
 	players[playerThreeId] = &Player{
 		question: &models.Question{
@@ -36,6 +38,7 @@ func TestGetPlayersScore1(t *testing.T) {
 		},
 		answerLie:     "answerLie3",
 		answerTruthId: 0,
+		ready:         true,
 	}
 	currentAnswers := GetCurrentAnswers(players, currentPlayerId)
 	result := GetPlayersScore(players, currentPlayerId, currentAnswers)
@@ -58,6 +61,7 @@ func TestGetPlayersScore2(t *testing.T) {
 			Answer: "truthAnswer1",
 		},
 		answerLie: "answerLie1",
+		ready:     true,
 	}
 	players[playerTwoId] = &Player{
 		question: &models.Question{
@@ -65,6 +69,7 @@ func TestGetPlayersScore2(t *testing.T) {
 		},
 		answerLie:     "answerLie2",
 		answerTruthId: 0,
+		ready:         true,
 	}
 	players[playerThreeId] = &Player{
 		question: &models.Question{
@@ -72,6 +77,7 @@ func TestGetPlayersScore2(t *testing.T) {
 		},
 		answerLie:     "answerLie3",
 		answerTruthId: 1,
+		ready:         true,
 	}
 	currentAnswers := GetCurrentAnswers(players, currentPlayerId)
 	fmt.Println(currentAnswers)
@@ -95,6 +101,7 @@ func TestGetPlayersScore3(t *testing.T) {
 			Answer: "truthAnswer1",
 		},
 		answerLie: "answerLie1",
+		ready:     true,
 	}
 	players[playerTwoId] = &Player{
 		question: &models.Question{
@@ -102,6 +109,7 @@ func TestGetPlayersScore3(t *testing.T) {
 		},
 		answerLie:     "answerLie2",
 		answerTruthId: 1,
+		ready:         true,
 	}
 	players[playerThreeId] = &Player{
 		question: &models.Question{
@@ -109,6 +117,7 @@ func TestGetPlayersScore3(t *testing.T) {
 		},
 		answerLie:     "answerLie3",
 		answerTruthId: 1,
+		ready:         true,
 	}
 	currentAnswers := GetCurrentAnswers(players, currentPlayerId)
 	fmt.Println(currentAnswers)
@@ -132,6 +141,7 @@ func TestGetPlayersScore4(t *testing.T) {
 			Answer: "truthAnswer1",
 		},
 		answerLie: "answerLie1",
+		ready:     true,
 	}
 	players[playerTwoId] = &Player{
 		question: &models.Question{
@@ -139,6 +149,7 @@ func TestGetPlayersScore4(t *testing.T) {
 		},
 		answerLie:     "answerLie2",
 		answerTruthId: 3,
+		ready:         true,
 	}
 	players[playerThreeId] = &Player{
 		question: &models.Question{
@@ -146,6 +157,7 @@ func TestGetPlayersScore4(t *testing.T) {
 		},
 		answerLie:     "answerLie3",
 		answerTruthId: 2,
+		ready:         true,
 	}
 	currentAnswers := GetCurrentAnswers(players, currentPlayerId)
 	fmt.Println(currentAnswers)
@@ -169,6 +181,7 @@ func TestGetPlayersScore5(t *testing.T) {
 			Answer: "truthAnswer1",
 		},
 		answerLie: "answerLie1",
+		ready:     true,
 	}
 	players[playerTwoId] = &Player{
 		question: &models.Question{
@@ -176,6 +189,7 @@ func TestGetPlayersScore5(t *testing.T) {
 		},
 		answerLie:     "answerLie2",
 		answerTruthId: 3,
+		ready:         true,
 	}
 	players[playerThreeId] = &Player{
 		question: &models.Question{
@@ -183,6 +197,7 @@ func TestGetPlayersScore5(t *testing.T) {
 		},
 		answerLie:     "answerLie3",
 		answerTruthId: 0,
+		ready:         true,
 	}
 	currentAnswers := GetCurrentAnswers(players, currentPlayerId)
 	fmt.Println(currentAnswers)

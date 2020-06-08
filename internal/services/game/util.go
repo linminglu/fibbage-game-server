@@ -47,6 +47,8 @@ func GetPlayersScore(players map[string]*Player, currentPlayerId string, current
 	for uid, player := range players {
 		if uid == currentPlayerId {
 			continue // we dont count score for current player
+		} else if !player.ready {
+			continue // we don't count score for missed answer
 		}
 		answer := currentAnswers[player.answerTruthId]
 		if strings.ToLower(answer) == strings.ToLower(currentPlayerTruth) {

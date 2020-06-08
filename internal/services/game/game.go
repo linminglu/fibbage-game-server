@@ -147,11 +147,21 @@ func (r *Game) Join(ctx context.Context, msg *NicknameMessage) (*Response, error
 
 	var users []User
 	for _, uid := range uids {
-		users = append(users, User{
-			UID:  uid,
-			Name: r.players[uid].name,
-			Icon: r.players[uid].iconName,
-		})
+		if uid == s.UID() {
+			users = append(users, User{
+				UID:      uid,
+				Name:     r.players[uid].name,
+				Icon:     r.players[uid].iconName,
+				IsPlayer: true,
+			})
+		} else {
+			users = append(users, User{
+				UID:  uid,
+				Name: r.players[uid].name,
+				Icon: r.players[uid].iconName,
+			})
+		}
+
 	}
 	for _, uid := range uids {
 		if uid == s.UID() {
@@ -178,7 +188,7 @@ func (r *Game) Join(ctx context.Context, msg *NicknameMessage) (*Response, error
 		delete(r.players, s.UID())
 		count, _ := pitaya.GroupCountMembers(context.Background(), "game")
 		if count == 0 {
-			r.done <- struct{}{}
+			//r.done <- struct{}{}
 		} else {
 			pitaya.GroupBroadcast(ctx, "game", "game", "onPlayerDisconnected", &User{UID: s.UID()})
 		}
@@ -682,6 +692,7 @@ func (r *Game) score(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	time.Sleep(10 * time.Second)
 	return nil
 }
