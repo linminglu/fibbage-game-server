@@ -1,0 +1,57 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: websocket-repeater
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  rules:
+    - host: ws.fibbage.com
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: websocket-game-service
+              servicePort: 8080
+          - path: /game
+            backend:
+              serviceName: fibbage-frontend-service
+              servicePort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: fibbage-game
+  name: websocket-game-service
+
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+    - nodePort: 30007
+      port: 3250
+      protocol: TCP
+      targetPort: 3250
+  selector:
+    app: fibbage-game
+  sessionAffinity: None
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: fibbage-game
+  name: fibbage-frontend-service
+
+spec:
+  externalTrafficPolicy: Cluster
+  ports:
+    - nodePort: 30008
+      port: 8080
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: fibbage-game
+  sessionAffinity: None
+  type: NodePort

@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fibbage-frontend
+spec:
+  selector:
+    matchLabels:
+      app: fibbage-game
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: fibbage-game
+    spec:
+      containers:
+        - name: fibbage-frontend
+          image: redax/fibbage-frontend
+          ports:
+            - containerPort: 80
+---
+
+
+
+
+
+
+

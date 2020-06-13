@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/jinzhu/configor"
+	"github.com/prometheus/common/log"
 	"github.com/zdarovich/fibbage-game-server/internal/db"
 	"github.com/zdarovich/fibbage-game-server/internal/db/models"
-	"github.com/zdarovich/fibbage-game-server/internal/log"
 	"path/filepath"
 	"strings"
 )
@@ -53,7 +53,6 @@ func createQuestions() {
 			//Suggestions:        strings.Join(p.Suggestions, ","),
 		}
 		if err := db.DB.Create(&q).Error; err != nil {
-			log.Errorf("create question (%v) failure, got err %v", q, err)
 		}
 	}
 }
@@ -61,14 +60,15 @@ func createQuestions() {
 func main() {
 	var Tables = []interface{}{
 		&models.Question{},
-		&models.QuestionAnswerEntity{},
+		//&models.QuestionAnswerEntity{},
 		&models.Room{},
-		&models.Score{},
-		&models.User{},
+		//&models.Score{},
+		//&models.User{},
 	}
 	TruncateTables(Tables...)
 	log.Info("Start create sample data...")
 
 	createQuestions()
 	log.Info("--> Created questions.")
+	
 }
