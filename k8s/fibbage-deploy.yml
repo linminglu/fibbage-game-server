@@ -34,6 +34,12 @@ spec:
           image: gcr.io/river-interface-280208/fibbage-game-server
           ports:
             - containerPort: 3250
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 3
 
 
 
