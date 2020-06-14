@@ -31,15 +31,9 @@ spec:
               value: etcd.default.svc.cluster.local:2379
             - name: PITAYA_MODULES_BINDINGSTORAGE_ETCD_ENDPOINTS
               value: etcd.default.svc.cluster.local:2379
-          image: gcr.io/river-interface-280208/fibbage-game-server
+          image: redax/fibbage-game-server
           ports:
             - containerPort: 3250
-          livenessProbe:
-            httpGet:
-              path: /ping
-              port: 8080
-            initialDelaySeconds: 3
-            periodSeconds: 3
 
 
 

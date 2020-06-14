@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
@@ -20,13 +19,7 @@ import (
 func main() {
 
 	defer pitaya.Shutdown()
-	go func() {
-		router := gin.Default()
-		router.GET("/ping", func(c *gin.Context) {
-			c.String(200, "pong")
-		})
-		router.Run("localhost:8080")
-	}()
+
 	s := json.NewSerializer()
 	conf := configApp()
 
