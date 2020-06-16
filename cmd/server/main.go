@@ -7,12 +7,12 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
 	"github.com/topfreegames/pitaya"
-	"github.com/topfreegames/pitaya/acceptor"
 	"github.com/topfreegames/pitaya/component"
 	"github.com/topfreegames/pitaya/config"
 	"github.com/topfreegames/pitaya/groups"
 	"github.com/topfreegames/pitaya/serialize/json"
 	"github.com/zdarovich/fibbage-game-server/internal/services/game"
+	"github.com/zdarovich/fibbage-game-server/pkg/acceptor"
 	"strings"
 )
 
@@ -45,6 +45,7 @@ func main() {
 		component.WithName("game"),
 		component.WithNameFunc(strings.ToLower),
 	)
+	//t := acceptor.NewWSAcceptor(":3250")
 	t := acceptor.NewWSAcceptor(":3250")
 	pitaya.AddAcceptor(t)
 

@@ -174,7 +174,7 @@ func (r *Game) Join(ctx context.Context, msg *NicknameMessage) (*Response, error
 		r.players[s.UID()].connected = false
 		if count == 0 {
 			r.reset()
-			pitaya.Shutdown()
+			//pitaya.Shutdown()
 		} else {
 			pitaya.GroupBroadcast(ctx, "game", r.groupUuid, "onPlayerDisconnected", &User{UID: s.UID()})
 		}
