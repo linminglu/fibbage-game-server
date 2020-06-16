@@ -1,4 +1,4 @@
-runtime: go114
+runtime: go
 env: flex
 main: ./cmd/server
 manual_scaling:
