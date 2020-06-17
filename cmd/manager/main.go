@@ -10,7 +10,7 @@ import (
 	"github.com/topfreegames/pitaya/config"
 	"github.com/topfreegames/pitaya/groups"
 	"github.com/topfreegames/pitaya/serialize/json"
-	"github.com/zdarovich/fibbage-game-server/internal/services/game"
+	"github.com/zdarovich/fibbage-game-server/services/game"
 	"strings"
 )
 

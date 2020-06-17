@@ -3,8 +3,8 @@ package main
 import (
 	"github.com/jinzhu/configor"
 	"github.com/prometheus/common/log"
-	"github.com/zdarovich/fibbage-game-server/internal/db"
-	"github.com/zdarovich/fibbage-game-server/internal/db/models"
+	"github.com/zdarovich/fibbage-game-server/db"
+	"github.com/zdarovich/fibbage-game-server/db/models"
 	"path/filepath"
 	"strings"
 )

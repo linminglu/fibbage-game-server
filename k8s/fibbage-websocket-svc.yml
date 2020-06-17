@@ -4,8 +4,10 @@ metadata:
   labels:
     app: fibbage-game
   name: websocket-game-service
+  annotations:
+    cloud.google.com/backend-config: '{"ports": {"3250":"my-wsc-backendconfig"}}'
 spec:
-  type: NodePort
+  type: LoadBalancer
   ports:
     - port: 3250
       protocol: TCP

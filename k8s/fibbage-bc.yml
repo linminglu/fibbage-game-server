@@ -3,6 +3,6 @@ kind: BackendConfig
 metadata:
   name: my-wsc-backendconfig
 spec:
-  timeoutSec: 40
+  timeoutSec: 1800
   connectionDraining:
-    drainingTimeoutSec: 60
+    drainingTimeoutSec: 1800

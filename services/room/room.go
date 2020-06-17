@@ -9,8 +9,8 @@ import (
 	"github.com/topfreegames/pitaya/logger"
 	"github.com/topfreegames/pitaya/session"
 	"github.com/topfreegames/pitaya/timer"
-	"github.com/zdarovich/fibbage-game-server/internal/services"
-	"github.com/zdarovich/fibbage-game-server/internal/services/game"
+	"github.com/zdarovich/fibbage-game-server/services"
+	"github.com/zdarovich/fibbage-game-server/services/game"
 	"math/big"
 	"time"
 )

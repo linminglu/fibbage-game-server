@@ -3,8 +3,8 @@ package fibbage
 import (
 	"github.com/looplab/fsm"
 	"github.com/topfreegames/pitaya/logger"
-	"github.com/zdarovich/fibbage-game-server/internal/services/game/event"
-	"github.com/zdarovich/fibbage-game-server/internal/services/game/state"
+	"github.com/zdarovich/fibbage-game-server/services/game/event"
+	"github.com/zdarovich/fibbage-game-server/services/game/state"
 )
 
 func New() *fsm.FSM {
