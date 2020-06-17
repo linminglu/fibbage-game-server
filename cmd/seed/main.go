@@ -1,9 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"github.com/jinzhu/configor"
+	"github.com/jinzhu/gorm"
 	"github.com/prometheus/common/log"
-	"github.com/zdarovich/fibbage-game-server/db"
 	"github.com/zdarovich/fibbage-game-server/db/models"
 	"path/filepath"
 	"strings"
@@ -25,24 +26,24 @@ var Seeds = struct {
 		Suggestions        []string `json:"suggestions"`
 	} `json:"normal"`
 }{}
-
 func init() {
 	filepaths, _ := filepath.Glob(filepath.Join("questions.json"))
 	if err := configor.Load(&Seeds, filepaths...); err != nil {
 		panic(err)
 	}
+
 }
-func TruncateTables(tables ...interface{}) {
+func TruncateTables(db *gorm.DB,tables ...interface{}) {
 	for _, table := range tables {
-		if err := db.DB.DropTableIfExists(table).Error; err != nil {
+		if err := db.DropTableIfExists(table).Error; err != nil {
 			panic(err)
 		}
 
-		db.DB.AutoMigrate(table)
+		db.AutoMigrate(table)
 	}
 }
 
-func createQuestions() {
+func createQuestions(db *gorm.DB) {
 	for _, p := range Seeds.Normal {
 		q := models.Question{
 			ModeType:           models.FACT,
@@ -52,12 +53,22 @@ func createQuestions() {
 			AlternateSpellings: strings.Join(p.AlternateSpellings, ","),
 			//Suggestions:        strings.Join(p.Suggestions, ","),
 		}
-		if err := db.DB.Create(&q).Error; err != nil {
+		if err := db.Create(&q).Error; err != nil {
 		}
 	}
 }
 
 func main() {
+	connStr := fmt.Sprintf(
+		"%s:%s@(%s)/fibbage_db?charset=utf8&parseTime=True&loc=Local",
+		"db.user",
+		"db.password",
+		"db.host",
+	)
+	db, err := gorm.Open("mysql", connStr)
+	if err != nil {
+		panic(err)
+	}
 	var Tables = []interface{}{
 		&models.Question{},
 		//&models.QuestionAnswerEntity{},
@@ -65,10 +76,10 @@ func main() {
 		//&models.Score{},
 		//&models.User{},
 	}
-	TruncateTables(Tables...)
+	TruncateTables(db,Tables...)
 	log.Info("Start create sample data...")
 
-	createQuestions()
+	createQuestions(db)
 	log.Info("--> Created questions.")
 	
 }

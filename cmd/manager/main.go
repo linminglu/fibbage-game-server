@@ -30,12 +30,12 @@ func main() {
 	}
 
 	// Migrate the schema
-	db, err = gorm.Open("mysql", "root:password@/fibbage_db?charset=utf8&parseTime=True&loc=Local")
+	db, err := gorm.Open("mysql", "root:password@/fibbage_db?charset=utf8&parseTime=True&loc=Local")
 	if err != nil {
 		panic("failed to connect database")
 	}
 
-	g := game.New(conf.GetString("pitaya.group.name.uuid"))
+	g := game.New(conf.GetString("pitaya.group.name.uuid"), db)
 	pitaya.Register(g,
 		component.WithName("game"),
 		component.WithNameFunc(strings.ToLower),
