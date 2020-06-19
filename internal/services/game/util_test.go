@@ -3,7 +3,7 @@ package game
 import (
 	"fmt"
 	"github.com/bmizerany/assert"
-	"github.com/zdarovich/fibbage-game-server/db/models"
+	"github.com/zdarovich/fibbage-game-server/internal/db/models"
 	"testing"
 )
 

@@ -49,7 +49,8 @@ type (
 	}
 	// NicknameMessage represents a message that user sent
 	NicknameMessage struct {
-		Nickname string `json:"nickname"`
+		Nickname  string `json:"nickname"`
+		GroupUuid string `json:"uuid"`
 	}
 
 	// NewUser message will be received when new user join room

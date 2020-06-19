@@ -9,8 +9,8 @@ import (
 	"github.com/topfreegames/pitaya/logger"
 	"github.com/topfreegames/pitaya/session"
 	"github.com/topfreegames/pitaya/timer"
-	"github.com/zdarovich/fibbage-game-server/services"
-	"github.com/zdarovich/fibbage-game-server/services/game"
+	services2 "github.com/zdarovich/fibbage-game-server/internal/services"
+	game2 "github.com/zdarovich/fibbage-game-server/internal/services/game"
 	"math/big"
 	"time"
 )
@@ -79,7 +79,7 @@ func (r *Room) Join(ctx context.Context, msg *NicknameMessage) (*Response, error
 		return nil, err
 	}
 
-	err = s.Set(game.NAME, msg.Nickname)
+	err = s.Set(game2.NAME, msg.Nickname)
 	if err != nil {
 		logger.Log.Error(err)
 		return nil, err
@@ -109,12 +109,12 @@ func (r *Room) Join(ctx context.Context, msg *NicknameMessage) (*Response, error
 			ri = randIdx.Int64()
 		}
 		r.icons[uid] = tempIcons[ri]
-		tempIcons = services.Remove(tempIcons, int(ri))
+		tempIcons = services2.Remove(tempIcons, int(ri))
 	}
 	var users []User
 	for _, uid := range uids {
 		sess := session.GetSessionByUID(uid)
-		if name, ok := sess.Get(game.NAME).(string); ok {
+		if name, ok := sess.Get(game2.NAME).(string); ok {
 			users = append(users, User{
 				UID:  uid,
 				Name: name,

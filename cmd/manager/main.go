@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"github.com/jinzhu/gorm"
 	"github.com/spf13/viper"
 	"github.com/topfreegames/pitaya"
@@ -10,7 +9,7 @@ import (
 	"github.com/topfreegames/pitaya/config"
 	"github.com/topfreegames/pitaya/groups"
 	"github.com/topfreegames/pitaya/serialize/json"
-	"github.com/zdarovich/fibbage-game-server/services/game"
+	"github.com/zdarovich/fibbage-game-server/internal/services/game"
 	"strings"
 )
 
@@ -24,12 +23,7 @@ func main() {
 	pitaya.SetSerializer(s)
 	gsi := groups.NewMemoryGroupService(config.NewConfig(conf))
 	pitaya.InitGroups(gsi)
-	err := pitaya.GroupCreate(context.Background(), conf.GetString("pitaya.group.name.uuid"))
-	if err != nil {
-		panic(err)
-	}
 
-	// Migrate the schema
 	db, err := gorm.Open("mysql", "root:password@/fibbage_db?charset=utf8&parseTime=True&loc=Local")
 	if err != nil {
 		panic("failed to connect database")
