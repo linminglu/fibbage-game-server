@@ -9,7 +9,7 @@ import (
 	"github.com/topfreegames/pitaya/config"
 	"github.com/topfreegames/pitaya/groups"
 	"github.com/topfreegames/pitaya/serialize/json"
-	"github.com/zdarovich/fibbage-game-server/internal/services/game"
+	"github.com/zdarovich/fibbage-game-server/internal/services/game/factsv2"
 	"strings"
 )
 
@@ -29,7 +29,7 @@ func main() {
 		panic("failed to connect database")
 	}
 
-	g := game.New(conf.GetString("pitaya.group.name.uuid"), db)
+	g := factsv2.New(conf.GetString("pitaya.group.name.uuid"), db)
 	pitaya.Register(g,
 		component.WithName("game"),
 		component.WithNameFunc(strings.ToLower),

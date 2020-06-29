@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
@@ -10,7 +11,7 @@ import (
 	"github.com/topfreegames/pitaya/config"
 	"github.com/topfreegames/pitaya/groups"
 	"github.com/topfreegames/pitaya/serialize/json"
-	"github.com/zdarovich/fibbage-game-server/internal/services/game"
+	"github.com/zdarovich/fibbage-game-server/internal/services/game/factsv2"
 	"github.com/zdarovich/fibbage-game-server/pkg/acceptor"
 	"strings"
 )
@@ -25,7 +26,10 @@ func main() {
 	pitaya.SetSerializer(s)
 	gsi := groups.NewMemoryGroupService(config.NewConfig(conf))
 	pitaya.InitGroups(gsi)
-
+	err := pitaya.GroupCreate(context.Background(), conf.GetString("group.uuid"))
+	if err != nil {
+		panic(err)
+	}
 	connStr := fmt.Sprintf(
 		"%s:%s@(%s)/fibbage_db?charset=utf8&parseTime=True&loc=Local",
 		conf.Get("db.user"),
@@ -36,7 +40,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	g := game.New(conf.GetString("group.uuid"), db)
+	g := factsv2.New(conf.GetString("group.uuid"), db)
 	pitaya.Register(g,
 		component.WithName("game"),
 		component.WithNameFunc(strings.ToLower),

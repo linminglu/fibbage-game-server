@@ -1,4 +1,4 @@
-package game
+package factsv1
 
 import (
 	"context"
@@ -15,6 +15,7 @@ import (
 	"github.com/topfreegames/pitaya/timer"
 	"github.com/zdarovich/fibbage-game-server/internal/db/models"
 	"github.com/zdarovich/fibbage-game-server/internal/services"
+	"github.com/zdarovich/fibbage-game-server/internal/services/game"
 	"github.com/zdarovich/fibbage-game-server/internal/services/game/event"
 	"github.com/zdarovich/fibbage-game-server/internal/services/game/fibbage"
 	"github.com/zdarovich/fibbage-game-server/internal/services/game/state"
@@ -113,7 +114,7 @@ func (r *Game) Join(ctx context.Context, msg *NicknameMessage) (*Response, error
 		usedIcons[p.iconName] = true
 	}
 	tempIcons := make([]string, 0)
-	for _, i := range iconSet {
+	for _, i := range game.IconSet {
 		if usedIcons[i] {
 			continue
 		}

@@ -1,4 +1,4 @@
-package game
+package factsv1
 
 import (
 	"fmt"

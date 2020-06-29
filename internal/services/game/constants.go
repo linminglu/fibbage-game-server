@@ -12,7 +12,7 @@ const (
 )
 
 var (
-	iconSet = []string{
+	IconSet = []string{
 		"angry",
 		"otter",
 		"adjust",

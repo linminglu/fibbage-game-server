@@ -1,17 +1,12 @@
-package game
+package factsv2
 
 type (
 	Message struct {
 		CurrentPlayerId string                      `json:"currentPlayerId,omitempty"`
 		Ticks           int                         `json:"ticks,omitempty"`
 		State           string                      `json:"state,omitempty"`
-		Categories      []string                    `json:"categories,omitempty"`
 		Answers         []string                    `json:"answers,omitempty"`
-		ServerTime      string                      `json:"time,omitempty"`
-		Status          string                      `json:"status,omitempty"`
-		Question        *Question                   `json:"question,omitempty"`
 		Other           *Question                   `json:"otherQuestion,omitempty"`
-		UserReady       *UserReady                  `json:"userReady,omitempty"`
 		Score           map[string]int              `json:"score,omitempty"`
 		Total           map[string]int              `json:"total,omitempty"`
 		Choices         map[string]*AnswerMatrixRow `json:"answerMatrix,omitempty"`
